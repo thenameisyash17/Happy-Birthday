@@ -4,8 +4,6 @@
 # ============================================================
 
 import os
-import json
-from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from functools import wraps
@@ -18,14 +16,14 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'yash-world-secret-key-2
 app.secret_key = app.config['SECRET_KEY']
 
 # ============================================================
-# LOGIN MANAGER (Simple)
+# LOGIN MANAGER
 # ============================================================
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 # ============================================================
-# USER CLASS (Simple)
+# USER CLASS - Simple in-memory users
 # ============================================================
 class User(UserMixin):
     def __init__(self, username, password, is_admin=False, is_friend=False):
@@ -39,7 +37,7 @@ class User(UserMixin):
         return self.password == password
 
 # ============================================================
-# USER STORE (In-Memory for Vercel)
+# USER STORE
 # ============================================================
 USERS = {
     'yash': User('yash', 'admin123', is_admin=True, is_friend=True),
@@ -127,7 +125,7 @@ def admin_users():
             'username': username,
             'is_admin': user.is_admin,
             'is_friend': user.is_friend,
-            'created_at': datetime.now()
+            'id': username
         })
     return render_template('admin_users.html', users=users_list)
 
@@ -141,16 +139,6 @@ def admin_feedback():
         feedback_questions=[]
     )
 
-@app.route('/admin/settings', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def admin_settings():
-    settings = {'site_title': 'YASH WORLD', 'site_tagline': 'Private Messaging Platform'}
-    if request.method == 'POST':
-        flash('Settings updated successfully!', 'success')
-        return redirect(url_for('admin_settings'))
-    return render_template('admin_settings.html', settings=settings)
-
 @app.route('/admin/responses')
 @login_required
 @admin_required
@@ -161,6 +149,25 @@ def admin_responses():
         unique_questions=0,
         total_questions=0,
         completion_percentage=0
+    )
+
+@app.route('/admin/settings', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_settings():
+    settings = {'site_title': 'YASH WORLD', 'site_tagline': 'Private Messaging Platform'}
+    if request.method == 'POST':
+        flash('Settings updated successfully!', 'success')
+        return redirect(url_for('admin_settings'))
+    return render_template('admin_settings.html', settings=settings)
+
+@app.route('/admin/typing-text')
+@login_required
+@admin_required
+def admin_typing_text():
+    return render_template('admin_typing_text.html', 
+        typing_texts=[],
+        active_text=None
     )
 
 # ============================================================
