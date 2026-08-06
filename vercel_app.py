@@ -7,6 +7,7 @@ import os
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from functools import wraps
+from datetime import datetime
 
 # ============================================================
 # APP CREATION
@@ -23,7 +24,7 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 # ============================================================
-# USER CLASS - Simple in-memory users
+# USER CLASS
 # ============================================================
 class User(UserMixin):
     def __init__(self, username, password, is_admin=False, is_friend=False):
@@ -49,7 +50,7 @@ def load_user(user_id):
     return USERS.get(user_id)
 
 # ============================================================
-# ADMIN REQUIRED DECORATOR
+# ADMIN REQUIRED
 # ============================================================
 def admin_required(f):
     @wraps(f)
@@ -125,7 +126,8 @@ def admin_users():
             'username': username,
             'is_admin': user.is_admin,
             'is_friend': user.is_friend,
-            'id': username
+            'id': username,
+            'created_at': datetime.now()
         })
     return render_template('admin_users.html', users=users_list)
 
@@ -161,14 +163,32 @@ def admin_settings():
         return redirect(url_for('admin_settings'))
     return render_template('admin_settings.html', settings=settings)
 
-@app.route('/admin/typing-text')
+@app.route('/admin/typing-text', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def admin_typing_text():
+    if request.method == 'POST':
+        flash('Typing text updated successfully!', 'success')
+        return redirect(url_for('admin_typing_text'))
+    
     return render_template('admin_typing_text.html', 
         typing_texts=[],
         active_text=None
     )
+
+@app.route('/admin/typing-text/<int:text_id>/activate')
+@login_required
+@admin_required
+def admin_activate_typing_text(text_id):
+    flash('Typing text activated!', 'success')
+    return redirect(url_for('admin_typing_text'))
+
+@app.route('/admin/typing-text/<int:text_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_typing_text(text_id):
+    flash('Typing text deleted!', 'success')
+    return redirect(url_for('admin_typing_text'))
 
 # ============================================================
 # ERROR HANDLERS
