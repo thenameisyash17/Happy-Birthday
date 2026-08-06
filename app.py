@@ -1,6 +1,7 @@
 # ============================================================
 # YASH WORLD - Private Messaging & QA Platform
 # Complete Version with ALL Features
+# Python 3.14 Compatible with psycopg (v3)
 # ============================================================
 
 import os
@@ -36,10 +37,13 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'yash-world-secret-key-2
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
+    # Fix postgres:// to postgresql://
     if DATABASE_URL.startswith('postgres://'):
         DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
-    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
-    logger.info("✅ PostgreSQL database configured - DATA WILL PERSIST")
+    
+    # Use psycopg driver for Python 3.14 compatibility
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL.replace('postgresql://', 'postgresql+psycopg://')
+    logger.info("✅ PostgreSQL database configured with psycopg driver - DATA WILL PERSIST")
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///yash_world.db'
     logger.warning("⚠️ SQLite database configured")
@@ -329,6 +333,7 @@ def dashboard():
         typing_text=typing_text,
         show_typing=show_typing
     )
+
 # ============================================================
 # ROUTES - NAVIGATE QUESTIONS
 # ============================================================
@@ -789,7 +794,7 @@ def toggle_friend(user_id):
     flash(f'Friend access {status} for {user.username}', 'success')
     return redirect(url_for('admin_users'))
 
-@app.route('/admin/user/<int:user_id>/reset-typing', methods=['POST'])
+@app.route('/admin/user/<int:user_id>/reset-typing', methods(['POST'])
 @login_required
 @admin_required
 def reset_typing(user_id):
