@@ -7,11 +7,21 @@
         <h2 style="color: var(--text-secondary);">📊 All Responses</h2>
         <p style="color: var(--text-muted); font-size: 14px;">View all replies given by the friend</p>
     </div>
-    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-sm">← Back to Dashboard</a>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <a href="{{ url_for('admin_feedback') }}" class="btn btn-gold btn-sm" style="padding: 10px 20px; border-radius: 14px; background: var(--gradient-gold); color: #333; text-decoration: none; transition: all 0.3s ease; box-shadow: 6px 6px 12px var(--shadow-light), -6px -6px 12px var(--shadow-dark);">
+            ⭐ Feedback
+        </a>
+        <a href="{{ url_for('admin_users') }}" class="btn btn-warning btn-sm" style="padding: 10px 20px; border-radius: 14px; background: var(--accent-yellow); color: white; text-decoration: none; transition: all 0.3s ease; box-shadow: 6px 6px 12px var(--shadow-light), -6px -6px 12px var(--shadow-dark);">
+            👥 Users
+        </a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-sm" style="padding: 10px 20px; border-radius: 14px; background: var(--bg-primary); color: var(--text-secondary); text-decoration: none; transition: all 0.3s ease; box-shadow: 6px 6px 12px var(--shadow-light), -6px -6px 12px var(--shadow-dark);">
+            ← Back
+        </a>
+    </div>
 </div>
 
-<!-- Statistics -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+<!-- Statistics Cards -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
     <div style="padding: 20px; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--inset-shadow); text-align: center;">
         <div style="font-size: 32px; font-weight: 800; color: var(--accent-blue);">{{ total_replies }}</div>
         <div style="font-size: 13px; color: var(--text-muted);">Total Replies</div>
@@ -35,7 +45,7 @@
 <!-- Search Bar -->
 <div style="margin-bottom: 20px;">
     <input type="text" id="searchResponses" placeholder="🔍 Search responses by question or reply..." 
-           style="width: 100%; padding: 14px 20px; border: none; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--inset-shadow); font-size: 16px; color: var(--text-primary); outline: none; font-family: var(--font-family);">
+           style="width: 100%; padding: 14px 20px; border: none; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--inset-shadow); font-size: 16px; color: var(--text-primary); outline: none; font-family: var(--font-family); transition: all 0.3s ease;">
 </div>
 
 <!-- All Responses -->
@@ -106,7 +116,7 @@
             
             <!-- Delete Button -->
             <div style="margin-top: 10px; display: flex; gap: 10px; justify-content: flex-end;">
-                <button onclick="deleteReply({{ reply.id }})" class="btn btn-danger btn-sm" style="padding: 6px 14px; border-radius: 12px; font-size: 12px; background: var(--accent-red); color: white; border: none; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 5px;">
+                <button onclick="deleteReply({{ reply.id }})" class="btn btn-danger btn-sm" style="padding: 6px 14px; border-radius: 12px; font-size: 12px; background: var(--accent-red); color: white; border: none; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 5px; box-shadow: 4px 4px 8px var(--shadow-light), -4px -4px 8px var(--shadow-dark);">
                     🗑️ Delete Reply
                 </button>
             </div>
@@ -156,6 +166,7 @@
 @media (max-width: 600px) {
     .response-card { padding: 15px !important; }
     .stat-card { padding: 12px !important; }
+    .media-reveal-btn { font-size: 10px !important; padding: 4px 10px !important; }
 }
 </style>
 
