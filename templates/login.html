@@ -2,6 +2,7 @@
 
 {% block content %}
 <div style="max-width: 420px; margin: 0 auto; padding: 35px 30px; border-radius: 25px; background: var(--bg-primary); box-shadow: var(--inset-shadow);">
+    
     <!-- Logo/Icon -->
     <div style="text-align: center; margin-bottom: 25px;">
         <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--gradient-primary); margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 40px; box-shadow: 0 10px 40px rgba(79,124,255,0.3);">
@@ -11,6 +12,7 @@
         <p style="color: var(--text-muted); font-size: 14px;">Sign in to your account</p>
     </div>
     
+    <!-- Login Form -->
     <form method="post" style="display: flex; flex-direction: column; gap: 18px;">
         <!-- Username Field -->
         <div style="position: relative;">
@@ -40,49 +42,34 @@
         
         <!-- Login Button -->
         <button type="submit" class="btn btn-primary btn-lg" id="loginBtn" 
-                style="width: 100%; justify-content: center; padding: 18px; font-size: 18px; border-radius: 20px; background: var(--gradient-primary); color: white; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 8px 30px rgba(79,124,255,0.4); font-weight: 700; display: flex; align-items: center; gap: 10px;">
+                style="width: 100%; justify-content: center; padding: 18px; font-size: 18px; border-radius: 20px; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 8px 30px rgba(79,124,255,0.4); font-weight: 700; display: flex; align-items: center; gap: 10px; background: var(--gradient-primary); color: white;">
             <span>🚀</span> Login
             <span style="transition: transform 0.3s ease;">→</span>
         </button>
     </form>
     
-    <!-- Quick Login Cards -->
-    <div style="margin-top: 25px;">
-        <p style="text-align: center; color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">— Quick Access —</p>
+    <!-- Demo Credentials -->
+    <div style="margin-top: 25px; text-align: center;">
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">— Quick Access —</p>
         
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <!-- Admin Login Card -->
-            <div onclick="fillDemo('@thenameisyash','last MSg')" 
-                 style="padding: 16px; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--card-shadow); cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; border: 2px solid transparent; position: relative; overflow: hidden;">
-                <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gradient-primary);"></div>
-                <div style="font-size: 28px; margin-bottom: 5px;">👑</div>
-                <div style="font-weight: 700; color: var(--accent-blue); font-size: 14px;">Admin</div>
-                <div style="font-size: 11px; color: var(--text-muted);">yash / admin123</div>
-                <div style="margin-top: 8px; display: inline-block; padding: 4px 14px; border-radius: 20px; background: var(--gradient-primary); color: white; font-size: 10px; font-weight: 600;">Click to Fill</div>
-            </div>
-            
-            <!-- Friend Login Card -->
-            <div onclick="fillDemo('Glory','Glory')" 
-                 style="padding: 16px; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--card-shadow); cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; border: 2px solid transparent; position: relative; overflow: hidden;">
-                <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gradient-gold);"></div>
-                <div style="font-size: 28px; margin-bottom: 5px;">🤝</div>
-                <div style="font-weight: 700; color: var(--accent-gold); font-size: 14px; color: var(--accent-orange);">Friend</div>
-                <div style="font-size: 11px; color: var(--text-muted);">Glory / lory</div>
-                <div style="margin-top: 8px; display: inline-block; padding: 4px 14px; border-radius: 20px; background: var(--gradient-gold); color: #333; font-size: 10px; font-weight: 600;">Click to Fill</div>
-            </div>
+        <!-- Admin Card -->
+        <div onclick="fillDemo('yash','admin123')" 
+             style="padding: 16px; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--card-shadow); cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; border: 2px solid transparent; position: relative; overflow: hidden; margin-bottom: 10px;">
+            <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gradient-primary);"></div>
+            <div style="font-size: 28px; margin-bottom: 5px;">👑</div>
+            <div style="font-weight: 700; color: var(--accent-blue); font-size: 14px;">Admin</div>
+            <div style="font-size: 11px; color: var(--text-muted);">yash / admin123</div>
+            <div style="margin-top: 8px; display: inline-block; padding: 4px 14px; border-radius: 20px; background: var(--gradient-primary); color: white; font-size: 10px; font-weight: 600;">Click to Fill</div>
         </div>
         
-        <!-- Quick Fill Button (Alternative) -->
-        <div style="text-align: center; margin-top: 15px; padding: 12px; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--inset-shadow);">
-            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">💡 Quick Fill Options</p>
-            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                <button onclick="fillDemo('yash','admin123')" class="btn btn-sm" style="background: var(--gradient-primary); color: white; padding: 8px 20px; font-size: 12px; border-radius: 12px; border: none; cursor: pointer; transition: all 0.3s ease;">
-                    ⚡ Admin
-                </button>
-                <button onclick="fillDemo('Glory','lory')" class="btn btn-sm" style="background: var(--gradient-gold); color: #333; padding: 8px 20px; font-size: 12px; border-radius: 12px; border: none; cursor: pointer; transition: all 0.3s ease;">
-                    ⚡ Friend
-                </button>
-            </div>
+        <!-- Friend Card -->
+        <div onclick="fillDemo('Glory','lory')" 
+             style="padding: 16px; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--card-shadow); cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; border: 2px solid transparent; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gradient-gold);"></div>
+            <div style="font-size: 28px; margin-bottom: 5px;">🤝</div>
+            <div style="font-weight: 700; color: var(--accent-orange); font-size: 14px;">Friend</div>
+            <div style="font-size: 11px; color: var(--text-muted);">Glory / lory</div>
+            <div style="margin-top: 8px; display: inline-block; padding: 4px 14px; border-radius: 20px; background: var(--gradient-gold); color: #333; font-size: 10px; font-weight: 600;">Click to Fill</div>
         </div>
     </div>
 </div>
@@ -112,11 +99,14 @@
 }
 
 @media (max-width: 480px) {
-    .grid-cards { grid-template-columns: 1fr !important; }
+    .login-container { padding: 20px !important; }
 }
 </style>
 
 <script>
+// ============================================
+// TOGGLE PASSWORD VISIBILITY
+// ============================================
 function togglePassword() {
     const input = document.getElementById('passwordInput');
     const btn = event.target;
@@ -129,11 +119,14 @@ function togglePassword() {
     }
 }
 
+// ============================================
+// FILL DEMO CREDENTIALS
+// ============================================
 function fillDemo(username, password) {
     document.getElementById('usernameInput').value = username;
     document.getElementById('passwordInput').value = password;
     
-    // Visual feedback - pulse animation
+    // Visual feedback - pulse animation on the card
     const btn = event && event.target ? event.target.closest('[onclick]') : null;
     if (btn) {
         btn.style.borderColor = 'var(--accent-green)';
@@ -143,9 +136,29 @@ function fillDemo(username, password) {
     showToast('✅ Credentials filled! Click Login.', 'success');
 }
 
-// Auto-focus on username
+// ============================================
+// AUTO-FOCUS ON USERNAME
+// ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('usernameInput').focus();
+    const usernameInput = document.getElementById('usernameInput');
+    if (usernameInput) {
+        setTimeout(() => usernameInput.focus(), 500);
+    }
+});
+
+// ============================================
+// KEYBOARD SHORTCUT - ENTER TO SUBMIT
+// ============================================
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        const activeElement = document.activeElement;
+        if (activeElement && activeElement.tagName === 'INPUT' && 
+            (activeElement.id === 'usernameInput' || activeElement.id === 'passwordInput')) {
+            e.preventDefault();
+            document.querySelector('form').submit();
+        }
+    }
 });
 </script>
+
 {% endblock %}
