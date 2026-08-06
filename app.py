@@ -1,6 +1,6 @@
 # ============================================================
 # YASH WORLD - Private Messaging & QA Platform
-# Vercel Compatible Version
+# Fixed for Render & Vercel Compatibility
 # ============================================================
 
 import os
@@ -13,6 +13,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import base64
+import sys
 
 # ============================================================
 # LOGGING CONFIGURATION
@@ -21,7 +22,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ============================================================
-# APP CREATION - MOVED TO TOP
+# APP CREATION
 # ============================================================
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'yash-world-secret-key-2024')
@@ -37,7 +38,7 @@ if DATABASE_URL:
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
     logger.info("✅ PostgreSQL database configured")
 else:
-    # Use in-memory SQLite for Vercel if no DATABASE_URL
+    # Use SQLite for local development
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///yash_world.db'
     logger.warning("⚠️ SQLite database configured")
 
@@ -45,10 +46,12 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
     'pool_recycle': 300,
+    'pool_size': 5,
+    'max_overflow': 10
 }
 
 # ============================================================
-# DATABASE INITIALIZATION - AFTER APP CREATION
+# DATABASE INITIALIZATION
 # ============================================================
 db = SQLAlchemy(app)
 login_manager = LoginManager()
@@ -56,7 +59,7 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 # ============================================================
-# MODELS - DEFINED AFTER DB INITIALIZATION
+# MODELS
 # ============================================================
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -346,7 +349,7 @@ def seen_typing():
     return jsonify({'success': True})
 
 # ============================================================
-# ROUTES - ASK QUESTION WITH OPTIONAL ANSWER
+# ROUTES - ASK QUESTION
 # ============================================================
 
 @app.route('/ask', methods=['GET', 'POST'])
@@ -846,7 +849,7 @@ def server_error(error):
     return render_template('error.html', error_code=500, message='Internal server error'), 500
 
 # ============================================================
-# DATABASE INITIALIZATION (Only when not in Vercel serverless)
+# DATABASE INITIALIZATION
 # ============================================================
 
 ADMIN_USERNAME = "yash"
@@ -905,19 +908,11 @@ def init_db():
             logger.error(f"❌ Database initialization error: {e}")
             db.session.rollback()
 
-# Initialize database only if not in Vercel environment
-if not os.environ.get('VERCEL'):
-    init_db()
+# Initialize database
+init_db()
 
 # ============================================================
-# VERCEL SERVERLESS HANDLER
-# ============================================================
-
-# This is the handler Vercel will use
-# The 'app' object is already defined at the top level
-
-# ============================================================
-# LOCAL DEVELOPMENT SERVER
+# RUN THE APPLICATION
 # ============================================================
 
 if __name__ == '__main__':
