@@ -1,11 +1,9 @@
 # ============================================================
 # YASH WORLD - Private Messaging & QA Platform
-# Complete Version with ALL Features
-# Python 3.14 Compatible with psycopg (v3)
+# Vercel Compatible Version
 # ============================================================
 
 import os
-import json
 import logging
 from datetime import datetime
 from werkzeug.utils import secure_filename
@@ -14,7 +12,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-from sqlalchemy import func, desc, text
 import base64
 
 # ============================================================
@@ -24,26 +21,23 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ============================================================
-# APP CONFIGURATION
+# APP CREATION - MOVED TO TOP
 # ============================================================
-
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'yash-world-secret-key-2024')
 
 # ============================================================
 # DATABASE CONFIGURATION
 # ============================================================
-
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
     if DATABASE_URL.startswith('postgres://'):
         DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
-    
-    # Use asyncpg driver for Python 3.14 compatibility
-    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL.replace('postgresql://', 'postgresql+asyncpg://')
-    logger.info("✅ PostgreSQL database configured with asyncpg driver - DATA WILL PERSIST")
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+    logger.info("✅ PostgreSQL database configured")
 else:
+    # Use in-memory SQLite for Vercel if no DATABASE_URL
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///yash_world.db'
     logger.warning("⚠️ SQLite database configured")
 
@@ -54,14 +48,16 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 }
 
 # ============================================================
-# DATABASE MODELS
+# DATABASE INITIALIZATION - AFTER APP CREATION
 # ============================================================
-
 db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+# ============================================================
+# MODELS - DEFINED AFTER DB INITIALIZATION
+# ============================================================
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -92,7 +88,6 @@ class Question(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     text = db.Column(db.Text, nullable=False)
     
-    # Question media
     image_data = db.Column(db.Text)
     video_data = db.Column(db.Text)
     audio_data = db.Column(db.Text)
@@ -100,7 +95,6 @@ class Question(db.Model):
     video_filename = db.Column(db.String(200))
     audio_filename = db.Column(db.String(200))
     
-    # Optional Answer fields
     answer_text = db.Column(db.Text)
     answer_image_data = db.Column(db.Text)
     answer_video_data = db.Column(db.Text)
@@ -270,25 +264,17 @@ def dashboard():
     is_admin = current_user.is_admin
     is_friend = current_user.is_friend
     
-    # Get active typing text for friend
     typing_text = None
     show_typing = False
     
     if is_friend and not is_admin:
-        # Get active typing text
         typing_text = TypingText.query.filter_by(is_active=True).first()
-        # Check if friend has already seen the typing animation
         seen_typing = session.get('seen_typing_' + str(current_user.id), False)
-        # Show typing if text exists and not seen
         if typing_text and not seen_typing:
             show_typing = True
-        else:
-            show_typing = False
     
-    # Get current question index from session
     current_index = session.get('current_question_index', 0)
     
-    # If no questions, render with typing if available
     if not questions:
         return render_template('dashboard.html', 
             questions=[],
@@ -303,7 +289,6 @@ def dashboard():
             show_typing=show_typing
         )
     
-    # Reset index if out of bounds
     if current_index >= len(questions):
         current_index = 0
         session['current_question_index'] = 0
@@ -311,10 +296,8 @@ def dashboard():
     current_question = questions[current_index]
     total_questions = len(questions)
     
-    # Get replies for current question
     replies = Reply.query.filter_by(question_id=current_question.id).order_by(Reply.created_at.asc()).all()
     
-    # Get feedback questions for friend
     feedback_questions = []
     if is_friend:
         feedback_questions = FeedbackQuestion.query.filter_by(is_active=True).all()
@@ -359,7 +342,6 @@ def navigate_question():
 @app.route('/seen-typing', methods=['POST'])
 @login_required
 def seen_typing():
-    # Mark typing as seen for this user
     session['seen_typing_' + str(current_user.id)] = True
     return jsonify({'success': True})
 
@@ -386,7 +368,6 @@ def ask_question():
             text=text
         )
         
-        # Question Media
         if 'image' in request.files and request.files['image'].filename:
             file = request.files['image']
             if is_allowed_image(file.filename):
@@ -405,14 +386,12 @@ def ask_question():
                 question.audio_data = file_to_base64(file)
                 question.audio_filename = secure_filename(file.filename)
         
-        # Optional Answer
         answer_text = request.form.get('answer_text', '').strip()
         if answer_text:
             question.answer_text = answer_text
             question.has_answer = True
             question.is_answered = True
             
-            # Answer Media
             if 'answer_image' in request.files and request.files['answer_image'].filename:
                 file = request.files['answer_image']
                 if is_allowed_image(file.filename):
@@ -440,7 +419,7 @@ def ask_question():
     return render_template('ask.html')
 
 # ============================================================
-# ROUTES - REPLY TO QUESTION (Friend)
+# ROUTES - REPLY TO QUESTION
 # ============================================================
 
 @app.route('/reply/<int:question_id>', methods=['GET', 'POST'])
@@ -493,7 +472,7 @@ def reply_question(question_id):
     return render_template('reply.html', question=question)
 
 # ============================================================
-# ROUTES - DELETE QUESTION & REPLY
+# ROUTES - DELETE
 # ============================================================
 
 @app.route('/question/<int:question_id>/delete', methods=['POST'])
@@ -523,7 +502,7 @@ def delete_reply(reply_id):
     return redirect(url_for('dashboard'))
 
 # ============================================================
-# ROUTES - EDIT QUESTION (Admin)
+# ROUTES - EDIT QUESTION
 # ============================================================
 
 @app.route('/question/<int:question_id>/edit', methods=['GET', 'POST'])
@@ -550,7 +529,7 @@ def edit_question(question_id):
     return render_template('edit_question.html', question=question)
 
 # ============================================================
-# ROUTES - DELETE INDIVIDUAL MEDIA (Admin)
+# ROUTES - DELETE INDIVIDUAL MEDIA
 # ============================================================
 
 @app.route('/question/<int:question_id>/delete-media', methods=['POST'])
@@ -602,7 +581,6 @@ def admin_typing_text():
     if request.method == 'POST':
         text = request.form.get('typing_text', '').strip()
         if text:
-            # Deactivate all existing
             TypingText.query.update({TypingText.is_active: False})
             new_text = TypingText(text=text, is_active=True)
             db.session.add(new_text)
@@ -645,7 +623,6 @@ def admin_delete_typing_text(text_id):
 # ROUTES - FEEDBACK SYSTEM
 # ============================================================
 
-# Admin - View All Feedback
 @app.route('/admin/feedback', methods=['GET'])
 @login_required
 @admin_required
@@ -658,7 +635,6 @@ def admin_feedback():
         responses=responses
     )
 
-# Admin - Add Feedback Question
 @app.route('/admin/feedback/add', methods=['POST'])
 @login_required
 @admin_required
@@ -673,7 +649,6 @@ def add_feedback_question():
         flash('Please enter a question.', 'danger')
     return redirect(url_for('admin_feedback'))
 
-# Admin - Toggle Feedback Question
 @app.route('/admin/feedback/toggle/<int:q_id>', methods=['POST'])
 @login_required
 @admin_required
@@ -685,7 +660,6 @@ def toggle_feedback_question(q_id):
     flash(f'Feedback question {status}!', 'success')
     return redirect(url_for('admin_feedback'))
 
-# Admin - Delete Feedback Question
 @app.route('/admin/feedback/delete/<int:q_id>', methods=['POST'])
 @login_required
 @admin_required
@@ -696,7 +670,6 @@ def delete_feedback_question(q_id):
     flash('Feedback question deleted!', 'success')
     return redirect(url_for('admin_feedback'))
 
-# Friend - Submit Feedback
 @app.route('/submit-feedback', methods=['POST'])
 @login_required
 def submit_feedback():
@@ -704,7 +677,6 @@ def submit_feedback():
         flash('Only friends can submit feedback.', 'danger')
         return redirect(url_for('dashboard'))
     
-    # Check if already submitted
     existing = FeedbackResponse.query.filter_by(user_id=current_user.id).first()
     if existing:
         flash('You have already submitted feedback.', 'warning')
@@ -742,23 +714,17 @@ def submit_feedback():
     return redirect(url_for('dashboard'))
 
 # ============================================================
-# ROUTES - ADMIN RESPONSES (View all replies)
+# ROUTES - ADMIN RESPONSES
 # ============================================================
 
 @app.route('/admin/responses')
 @login_required
 @admin_required
 def admin_responses():
-    # Get all replies
     all_replies = Reply.query.order_by(Reply.created_at.desc()).all()
-    
-    # Get total questions
     total_questions = Question.query.count()
-    
-    # Get unique questions that have replies
     unique_questions = db.session.query(Reply.question_id).distinct().count()
     
-    # Calculate completion percentage
     completion_percentage = 0
     if total_questions > 0:
         completion_percentage = int((unique_questions / total_questions) * 100)
@@ -772,7 +738,7 @@ def admin_responses():
     )
 
 # ============================================================
-# ROUTES - ADMIN - MANAGE USERS
+# ROUTES - ADMIN USERS
 # ============================================================
 
 @app.route('/admin/users')
@@ -793,11 +759,10 @@ def toggle_friend(user_id):
     flash(f'Friend access {status} for {user.username}', 'success')
     return redirect(url_for('admin_users'))
 
-@app.route('/admin/user/<int:user_id>/reset-typing', methods(['POST'])
+@app.route('/admin/user/<int:user_id>/reset-typing', methods=['POST'])
 @login_required
 @admin_required
 def reset_typing(user_id):
-    # Clear the typing session for the user
     session.pop('seen_typing_' + str(user_id), None)
     flash('Typing animation reset for user.', 'success')
     return redirect(url_for('admin_users'))
@@ -881,17 +846,13 @@ def server_error(error):
     return render_template('error.html', error_code=500, message='Internal server error'), 500
 
 # ============================================================
-# DATABASE INITIALIZATION
+# DATABASE INITIALIZATION (Only when not in Vercel serverless)
 # ============================================================
 
-# ============================================================
-# 🔑 CHANGE CREDENTIALS HERE
-# ============================================================
-ADMIN_USERNAME = "yash"      # Change this to your desired admin username
-ADMIN_PASSWORD = "admin123"       # Change this to your desired admin password
-FRIEND_USERNAME = "Glory"    # Change this to your desired friend username
-FRIEND_PASSWORD = "lory" # Change this to your desired friend password
-# ============================================================
+ADMIN_USERNAME = "yash"
+ADMIN_PASSWORD = "admin123"
+FRIEND_USERNAME = "Glory"
+FRIEND_PASSWORD = "lory"
 
 def init_db():
     with app.app_context():
@@ -899,7 +860,6 @@ def init_db():
             db.create_all()
             logger.info("✅ Database tables created/verified")
             
-            # Create admin user
             admin = User.query.filter_by(username=ADMIN_USERNAME).first()
             if not admin:
                 admin = User(username=ADMIN_USERNAME, is_admin=True, is_friend=True)
@@ -907,10 +867,7 @@ def init_db():
                 db.session.add(admin)
                 db.session.commit()
                 logger.info(f"✅ Admin user created: {ADMIN_USERNAME} / {ADMIN_PASSWORD}")
-            else:
-                logger.info(f"✅ Admin user already exists: {ADMIN_USERNAME}")
             
-            # Create friend user
             friend = User.query.filter_by(username=FRIEND_USERNAME).first()
             if not friend:
                 friend = User(username=FRIEND_USERNAME, is_admin=False, is_friend=True)
@@ -918,10 +875,7 @@ def init_db():
                 db.session.add(friend)
                 db.session.commit()
                 logger.info(f"✅ Friend user created: {FRIEND_USERNAME} / {FRIEND_PASSWORD}")
-            else:
-                logger.info(f"✅ Friend user already exists: {FRIEND_USERNAME}")
             
-            # Create default settings
             settings = SiteSettings.query.first()
             if not settings:
                 settings = SiteSettings(
@@ -932,7 +886,6 @@ def init_db():
                 db.session.commit()
                 logger.info("✅ Default settings created")
             
-            # Create default feedback questions
             if FeedbackQuestion.query.count() == 0:
                 default_questions = [
                     "How would you rate me as a friend?",
@@ -948,25 +901,25 @@ def init_db():
                 db.session.commit()
                 logger.info("✅ Default feedback questions created")
             
-            logger.info("\n" + "="*60)
-            logger.info("🚀 YASH WORLD - Private Messaging & QA Platform")
-            logger.info("="*60)
-            logger.info(f"📊 Database: {app.config['SQLALCHEMY_DATABASE_URI']}")
-            logger.info(f"🔑 Admin (You): {ADMIN_USERNAME} / {ADMIN_PASSWORD}")
-            logger.info(f"👤 Friend: {FRIEND_USERNAME} / {FRIEND_PASSWORD}")
-            logger.info("💾 ALL DATA stored in Database - PERMANENT!")
-            logger.info("✏️ Typing Animation enabled for friend login")
-            logger.info("="*60 + "\n")
-            
         except Exception as e:
             logger.error(f"❌ Database initialization error: {e}")
             db.session.rollback()
 
+# Initialize database only if not in Vercel environment
+if not os.environ.get('VERCEL'):
+    init_db()
+
 # ============================================================
-# RUN THE APPLICATION
+# VERCEL SERVERLESS HANDLER
+# ============================================================
+
+# This is the handler Vercel will use
+# The 'app' object is already defined at the top level
+
+# ============================================================
+# LOCAL DEVELOPMENT SERVER
 # ============================================================
 
 if __name__ == '__main__':
-    init_db()
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=True, host='0.0.0.0', port=port)
