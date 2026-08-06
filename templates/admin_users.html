@@ -3,24 +3,62 @@
 {% block content %}
 
 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
-    <h2 style="color: var(--text-secondary);">👥 Manage Users</h2>
-    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-sm">← Back to Dashboard</a>
+    <div>
+        <h2 style="color: var(--text-secondary);">👥 Manage Users</h2>
+        <p style="color: var(--text-muted); font-size: 14px;">View and manage all registered users</p>
+    </div>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-sm" style="padding: 10px 24px; border-radius: 14px; background: var(--bg-primary); color: var(--text-secondary); text-decoration: none; transition: all 0.3s ease; box-shadow: 6px 6px 12px var(--shadow-light), -6px -6px 12px var(--shadow-dark);">
+        ← Back to Dashboard
+    </a>
 </div>
 
-<div style="padding: 20px; border-radius: 18px; background: var(--bg-primary); box-shadow: var(--inset-shadow); overflow-x: auto;">
-    <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
+<!-- Statistics Cards -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px;">
+    <div style="padding: 18px; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--inset-shadow); text-align: center;">
+        <div style="font-size: 28px; font-weight: 800; color: var(--accent-blue);">{{ users|length }}</div>
+        <div style="font-size: 12px; color: var(--text-muted);">Total Users</div>
+    </div>
+    <div style="padding: 18px; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--inset-shadow); text-align: center;">
+        <div style="font-size: 28px; font-weight: 800; color: var(--accent-green);">
+            {% set friend_count = 0 %}
+            {% for user in users %}
+                {% if user.is_friend %}
+                    {% set friend_count = friend_count + 1 %}
+                {% endif %}
+            {% endfor %}
+            {{ friend_count }}
+        </div>
+        <div style="font-size: 12px; color: var(--text-muted);">Friends</div>
+    </div>
+    <div style="padding: 18px; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--inset-shadow); text-align: center;">
+        <div style="font-size: 28px; font-weight: 800; color: var(--accent-yellow);">
+            {% set admin_count = 0 %}
+            {% for user in users %}
+                {% if user.is_admin %}
+                    {% set admin_count = admin_count + 1 %}
+                {% endif %}
+            {% endfor %}
+            {{ admin_count }}
+        </div>
+        <div style="font-size: 12px; color: var(--text-muted);">Admins</div>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div style="padding: 20px; border-radius: 18px; background: var(--bg-primary); box-shadow: var(--card-shadow); overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; min-width: 500px;">
         <thead>
             <tr style="border-bottom: 2px solid var(--shadow-light);">
-                <th style="text-align: left; padding: 12px; color: var(--text-muted); font-size: 13px;">Username</th>
-                <th style="text-align: left; padding: 12px; color: var(--text-muted); font-size: 13px;">Role</th>
-                <th style="text-align: left; padding: 12px; color: var(--text-muted); font-size: 13px;">Friend Access</th>
-                <th style="text-align: left; padding: 12px; color: var(--text-muted); font-size: 13px;">Joined</th>
-                <th style="text-align: left; padding: 12px; color: var(--text-muted); font-size: 13px;">Actions</th>
+                <th style="text-align: left; padding: 12px; color: var(--text-muted); font-size: 13px; font-weight: 600;">Username</th>
+                <th style="text-align: left; padding: 12px; color: var(--text-muted); font-size: 13px; font-weight: 600;">Role</th>
+                <th style="text-align: left; padding: 12px; color: var(--text-muted); font-size: 13px; font-weight: 600;">Friend Access</th>
+                <th style="text-align: left; padding: 12px; color: var(--text-muted); font-size: 13px; font-weight: 600;">Joined</th>
+                <th style="text-align: left; padding: 12px; color: var(--text-muted); font-size: 13px; font-weight: 600;">Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for user in users %}
-            <tr style="border-bottom: 1px solid var(--shadow-light);">
+            <tr style="border-bottom: 1px solid var(--shadow-light); transition: all 0.3s ease;">
                 <td style="padding: 12px; font-weight: 600; color: var(--text-secondary);">
                     {{ user.username }}
                     <span style="color: var(--text-muted); font-size: 11px; font-weight: 400;">(ID: {{ user.id }})</span>
@@ -46,17 +84,17 @@
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         {% if not user.is_admin %}
                         <form method="post" action="{{ url_for('toggle_friend', user_id=user.id) }}" style="display: inline;">
-                            <button type="submit" class="btn btn-sm {% if user.is_friend %}btn-danger{% else %}btn-success{% endif %}" style="padding: 4px 12px; font-size: 11px; border-radius: 10px; border: none; cursor: pointer; transition: all 0.3s ease;">
+                            <button type="submit" class="btn btn-sm {% if user.is_friend %}btn-danger{% else %}btn-success{% endif %}" style="padding: 4px 12px; font-size: 11px; border-radius: 10px; border: none; cursor: pointer; transition: all 0.3s ease; {% if user.is_friend %}background: var(--accent-red); color: white;{% else %}background: var(--accent-green); color: white;{% endif %} box-shadow: 4px 4px 8px var(--shadow-light), -4px -4px 8px var(--shadow-dark);">
                                 {% if user.is_friend %}❌ Remove Friend{% else %}✅ Make Friend{% endif %}
                             </button>
                         </form>
                         <form method="post" action="{{ url_for('reset_typing', user_id=user.id) }}" style="display: inline;">
-                            <button type="submit" class="btn btn-sm" style="padding: 4px 12px; font-size: 11px; border-radius: 10px; border: none; cursor: pointer; transition: all 0.3s ease; background: var(--accent-purple); color: white;">
+                            <button type="submit" class="btn btn-sm" style="padding: 4px 12px; font-size: 11px; border-radius: 10px; border: none; cursor: pointer; transition: all 0.3s ease; background: var(--accent-purple); color: white; box-shadow: 4px 4px 8px var(--shadow-light), -4px -4px 8px var(--shadow-dark);">
                                 🔄 Reset Typing
                             </button>
                         </form>
                         {% else %}
-                        <span style="color: var(--text-muted); font-size: 12px;">🔒 Protected</span>
+                        <span style="color: var(--text-muted); font-size: 12px; padding: 4px 12px; background: var(--bg-primary); border-radius: 10px; box-shadow: var(--inset-shadow);">🔒 Protected</span>
                         {% endif %}
                     </div>
                 </td>
@@ -66,24 +104,19 @@
     </table>
 </div>
 
-<!-- Statistics -->
-<div style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
-    <div style="padding: 15px; border-radius: 14px; background: var(--bg-primary); box-shadow: var(--inset-shadow); text-align: center;">
-        <div style="font-size: 24px; font-weight: 800; color: var(--accent-blue);">{{ users|length }}</div>
-        <div style="font-size: 12px; color: var(--text-muted);">Total Users</div>
-    </div>
-    <div style="padding: 15px; border-radius: 14px; background: var(--bg-primary); box-shadow: var(--inset-shadow); text-align: center;">
-        <div style="font-size: 24px; font-weight: 800; color: var(--accent-green);">{{ users|selectattr('is_friend')|list|length }}</div>
-        <div style="font-size: 12px; color: var(--text-muted);">Friends</div>
-    </div>
-    <div style="padding: 15px; border-radius: 14px; background: var(--bg-primary); box-shadow: var(--inset-shadow); text-align: center;">
-        <div style="font-size: 24px; font-weight: 800; color: var(--accent-yellow);">{{ users|selectattr('is_admin')|list|length }}</div>
-        <div style="font-size: 12px; color: var(--text-muted);">Admins</div>
-    </div>
-</div>
-
-<div style="margin-top: 20px;">
-    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+<!-- Quick Actions -->
+<div style="margin-top: 20px; display: flex; gap: 15px; flex-wrap: wrap;">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-sm" style="padding: 10px 24px; border-radius: 14px; background: var(--bg-primary); color: var(--text-secondary); text-decoration: none; transition: all 0.3s ease; box-shadow: 6px 6px 12px var(--shadow-light), -6px -6px 12px var(--shadow-dark);">
+        ← Back to Dashboard
+    </a>
+    {% if current_user.is_admin %}
+    <a href="{{ url_for('admin_feedback') }}" class="btn btn-gold btn-sm" style="padding: 10px 24px; border-radius: 14px; background: var(--gradient-gold); color: #333; text-decoration: none; transition: all 0.3s ease; box-shadow: 6px 6px 12px var(--shadow-light), -6px -6px 12px var(--shadow-dark);">
+        ⭐ View Feedback
+    </a>
+    <a href="{{ url_for('admin_responses') }}" class="btn btn-primary btn-sm" style="padding: 10px 24px; border-radius: 14px; background: var(--gradient-primary); color: white; text-decoration: none; transition: all 0.3s ease; box-shadow: 6px 6px 12px var(--shadow-light), -6px -6px 12px var(--shadow-dark);">
+        📊 View Responses
+    </a>
+    {% endif %}
 </div>
 
 <style>
