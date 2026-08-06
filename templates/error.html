@@ -1,22 +1,349 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div style="text-align: center; padding: 60px 20px;">
-    <div style="font-size: 72px; margin-bottom: 20px;">
-        {% if error_code == 404 %}🔍
-        {% elif error_code == 500 %}⚠️
-        {% else %}❌{% endif %}
-    </div>
-    <h1 style="font-size: 64px; font-weight: 800; color: var(--accent-blue);">{{ error_code }}</h1>
-    <h2 style="color: var(--text-secondary); margin-bottom: 15px;">
-        {% if error_code == 404 %}Page Not Found
-        {% elif error_code == 500 %}Server Error
-        {% else %}Something Went Wrong{% endif %}
-    </h2>
-    <p style="color: var(--text-muted); font-size: 18px; margin-bottom: 30px;">{{ message }}</p>
-    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">🏠 Dashboard</a>
-        <a href="javascript:history.back()" class="btn">🔙 Go Back</a>
+<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; padding: 20px 0;">
+    <div style="max-width: 600px; width: 100%; text-align: center; padding: 40px 30px; border-radius: 30px; background: var(--bg-primary); box-shadow: var(--inset-shadow);">
+        
+        <!-- Error Icon -->
+        <div style="font-size: 80px; margin-bottom: 15px; display: block; animation: floatIcon 3s ease-in-out infinite;">
+            {% if error_code == 404 %}
+                🔍
+            {% elif error_code == 500 %}
+                ⚠️
+            {% elif error_code == 403 %}
+                🚫
+            {% elif error_code == 401 %}
+                🔒
+            {% else %}
+                ❌
+            {% endif %}
+        </div>
+        
+        <!-- Error Code -->
+        <h1 style="font-size: 80px; font-weight: 800; color: var(--accent-blue); margin: 10px 0; text-shadow: -2px -2px 2px var(--shadow-dark), 2px 2px 3px var(--shadow-light);">
+            {{ error_code }}
+        </h1>
+        
+        <!-- Error Message -->
+        <h2 style="font-size: 28px; color: var(--text-secondary); margin: 10px 0 15px 0;">
+            {% if error_code == 404 %}
+                Page Not Found
+            {% elif error_code == 500 %}
+                Internal Server Error
+            {% elif error_code == 403 %}
+                Access Denied
+            {% elif error_code == 401 %}
+                Unauthorized
+            {% else %}
+                Something Went Wrong
+            {% endif %}
+        </h2>
+        
+        <p style="font-size: 18px; color: var(--text-muted); line-height: 1.6; margin-bottom: 25px;">
+            {{ message }}
+        </p>
+        
+        <!-- Error Details (for debugging) -->
+        {% if error_details %}
+        <div style="margin: 20px 0; text-align: left;">
+            <details style="padding: 15px 20px; border-radius: 12px; background: var(--bg-primary); box-shadow: var(--inset-shadow);">
+                <summary style="cursor: pointer; font-weight: 600; color: var(--text-secondary); font-size: 14px;">
+                    🔧 Technical Details
+                </summary>
+                <pre style="margin-top: 10px; padding: 15px; border-radius: 8px; background: var(--bg-primary); box-shadow: var(--inset-shadow); font-size: 13px; color: var(--text-muted); overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto;">{{ error_details }}</pre>
+            </details>
+        </div>
+        {% endif %}
+        
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin: 25px 0 20px 0;">
+            <a href="{{ url_for('index') }}" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 14px 30px; border-radius: 16px; background: var(--gradient-primary); color: white; text-decoration: none; font-weight: 700; transition: all 0.3s ease; box-shadow: 0 8px 25px rgba(79,124,255,0.3);">
+                🏠 Go Home
+            </a>
+            <a href="javascript:history.back()" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; padding: 14px 30px; border-radius: 16px; background: var(--bg-primary); color: var(--text-secondary); text-decoration: none; font-weight: 700; transition: all 0.3s ease; box-shadow: 8px 8px 16px var(--shadow-light), -8px -8px 16px var(--shadow-dark);">
+                🔙 Go Back
+            </a>
+            {% if current_user.is_authenticated and current_user.is_admin %}
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-purple" style="display: inline-flex; align-items: center; gap: 8px; padding: 14px 30px; border-radius: 16px; background: var(--accent-purple); color: white; text-decoration: none; font-weight: 700; transition: all 0.3s ease; box-shadow: 0 8px 25px rgba(155,89,182,0.3);">
+                ⚙️ Admin Dashboard
+            </a>
+            {% endif %}
+        </div>
+        
+        <!-- Helpful Links -->
+        <div style="margin: 20px 0; padding: 20px; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--inset-shadow);">
+            <p style="font-weight: 600; color: var(--text-secondary); margin-bottom: 10px;">You might want to:</p>
+            <ul style="list-style: none; padding: 0; margin: 0;">
+                <li style="margin: 8px 0;">
+                    <a href="{{ url_for('index') }}" style="color: var(--accent-blue); text-decoration: none; transition: color 0.3s ease;">
+                        🏠 Return to homepage
+                    </a>
+                </li>
+                {% if current_user.is_authenticated %}
+                <li style="margin: 8px 0;">
+                    <a href="{{ url_for('dashboard') }}" style="color: var(--accent-blue); text-decoration: none; transition: color 0.3s ease;">
+                        📊 Go to dashboard
+                    </a>
+                </li>
+                {% else %}
+                <li style="margin: 8px 0;">
+                    <a href="{{ url_for('login') }}" style="color: var(--accent-blue); text-decoration: none; transition: color 0.3s ease;">
+                        🔑 Login to your account
+                    </a>
+                </li>
+                {% endif %}
+                <li style="margin: 8px 0;">
+                    <a href="javascript:history.back()" style="color: var(--accent-blue); text-decoration: none; transition: color 0.3s ease;">
+                        🔙 Go back to previous page
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Fun Fact / Random Message -->
+        <div style="margin-top: 20px; padding: 15px 20px; border-radius: 12px; background: var(--bg-primary); box-shadow: var(--inset-shadow);">
+            <p id="errorFact" style="font-size: 14px; color: var(--text-muted); font-style: italic; margin: 0;">
+                💡 Did you know? Errors are just opportunities to learn!
+            </p>
+        </div>
     </div>
 </div>
+
+<style>
+/* Error Icon Floating Animation */
+@keyframes floatIcon {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-15px) rotate(-5deg); }
+}
+
+/* Error Page Fade In */
+#errorPage {
+    animation: fadeInScale 0.5s ease-out;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Button Hover Effects */
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px rgba(79,124,255,0.4);
+}
+
+.btn-secondary:hover {
+    transform: translateY(-3px);
+    box-shadow: 12px 12px 24px var(--shadow-light), -12px -12px 24px var(--shadow-dark);
+}
+
+.btn-purple:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px rgba(155,89,182,0.4);
+}
+
+/* Link Hover Effects */
+ul li a:hover {
+    text-decoration: underline !important;
+    color: var(--accent-purple) !important;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+    .error-container {
+        padding: 30px 20px !important;
+    }
+    
+    .error-icon {
+        font-size: 56px !important;
+    }
+    
+    .error-code {
+        font-size: 60px !important;
+    }
+    
+    .error-title {
+        font-size: 24px !important;
+    }
+    
+    .error-message {
+        font-size: 16px !important;
+    }
+    
+    .btn {
+        padding: 12px 24px !important;
+        font-size: 15px !important;
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .error-actions {
+        flex-direction: column;
+        gap: 10px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .error-container {
+        padding: 20px 15px !important;
+        border-radius: 20px !important;
+    }
+    
+    .error-icon {
+        font-size: 44px !important;
+    }
+    
+    .error-code {
+        font-size: 48px !important;
+    }
+    
+    .error-title {
+        font-size: 20px !important;
+    }
+    
+    .error-message {
+        font-size: 15px !important;
+    }
+    
+    .btn {
+        padding: 10px 18px !important;
+        font-size: 14px !important;
+    }
+}
+</style>
+
+<script>
+// ============================================
+// RANDOM ERROR FACTS
+// ============================================
+const errorFacts = [
+    "💡 Did you know? Errors are just opportunities to learn!",
+    "🔧 Every error is a step closer to a solution.",
+    "🧠 The best developers learn from their errors.",
+    "🌟 Even the best apps have errors sometimes.",
+    "💪 Don't let errors discourage you - they make you stronger!",
+    "🎯 Finding errors is the first step to fixing them.",
+    "🚀 Every great app started with many errors.",
+    "📚 Errors teach us what doesn't work, so we can find what does.",
+    "🧩 Debugging is like solving a puzzle - each error is a piece.",
+    "⭐ The error is temporary, but the solution is forever."
+];
+
+document.addEventListener('DOMContentLoaded', function() {
+    const factElement = document.getElementById('errorFact');
+    if (factElement) {
+        const randomIndex = Math.floor(Math.random() * errorFacts.length);
+        factElement.textContent = errorFacts[randomIndex];
+    }
+});
+
+// ============================================
+// ERROR PAGE INTERACTIONS
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    // Double-click on error icon for easter egg
+    const icon = document.querySelector('.error-icon');
+    if (icon) {
+        icon.addEventListener('dblclick', function() {
+            this.style.transform = 'scale(1.5) rotate(180deg)';
+            this.style.transition = 'all 0.5s ease';
+            setTimeout(() => {
+                this.style.transform = '';
+            }, 1000);
+        });
+    }
+    
+    // Click on error code for fun
+    const code = document.querySelector('.error-code');
+    if (code) {
+        code.addEventListener('click', function() {
+            const currentText = this.textContent;
+            const emojis = ['🔥', '💫', '✨', '🌟', '⭐'];
+            const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+            this.textContent = randomEmoji + ' ' + currentText + ' ' + randomEmoji;
+            this.style.transition = 'all 0.3s ease';
+            this.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                this.style.transform = '';
+            }, 300);
+        });
+    }
+});
+
+// ============================================
+// AUTO-REFRESH FOR 5XX ERRORS
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    const errorCode = {{ error_code|default(500) }};
+    
+    // Auto-refresh after 30 seconds for 500 errors
+    if (errorCode >= 500 && errorCode < 600) {
+        const errorBtn = document.querySelector('.btn-primary');
+        if (errorBtn) {
+            errorBtn.textContent = '🔄 Retry';
+            errorBtn.href = 'javascript:location.reload()';
+        }
+        
+        // Show countdown to auto-refresh
+        const message = document.querySelector('.error-message');
+        if (message) {
+            let countdown = 30;
+            const originalText = message.textContent;
+            message.textContent = originalText + ` (Auto-retry in ${countdown}s)`;
+            
+            const interval = setInterval(() => {
+                countdown--;
+                if (countdown > 0) {
+                    message.textContent = originalText + ` (Auto-retry in ${countdown}s)`;
+                } else {
+                    clearInterval(interval);
+                    message.textContent = originalText + ' (Retrying...)';
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                }
+            }, 1000);
+        }
+    }
+});
+
+// ============================================
+// KEYBOARD SHORTCUTS FOR ERROR PAGE
+// ============================================
+document.addEventListener('keydown', function(e) {
+    // 'H' key - Go Home
+    if (e.key === 'h' || e.key === 'H') {
+        if (!e.target.matches('input, textarea, select')) {
+            window.location.href = '{{ url_for("index") }}';
+        }
+    }
+    
+    // 'R' key - Reload (for 5xx errors)
+    if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey) {
+        const errorCode = {{ error_code|default(500) }};
+        if (errorCode >= 500 && errorCode < 600) {
+            if (!e.target.matches('input, textarea, select')) {
+                location.reload();
+            }
+        }
+    }
+    
+    // 'B' key - Go Back
+    if (e.key === 'b' || e.key === 'B') {
+        if (!e.target.matches('input, textarea, select')) {
+            history.back();
+        }
+    }
+});
+
+// Show keyboard shortcuts hint in console
+console.log('🔑 Keyboard shortcuts: H=Home, B=Back, R=Refresh (5xx errors)');
+</script>
+
 {% endblock %}
