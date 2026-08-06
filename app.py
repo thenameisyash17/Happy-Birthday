@@ -37,13 +37,12 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'yash-world-secret-key-2
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
-    # Fix postgres:// to postgresql://
     if DATABASE_URL.startswith('postgres://'):
         DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
     
-    # Use psycopg driver for Python 3.14 compatibility
-    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL.replace('postgresql://', 'postgresql+psycopg://')
-    logger.info("✅ PostgreSQL database configured with psycopg driver - DATA WILL PERSIST")
+    # Use asyncpg driver for Python 3.14 compatibility
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL.replace('postgresql://', 'postgresql+asyncpg://')
+    logger.info("✅ PostgreSQL database configured with asyncpg driver - DATA WILL PERSIST")
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///yash_world.db'
     logger.warning("⚠️ SQLite database configured")
