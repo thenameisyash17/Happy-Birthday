@@ -1,74 +1,58 @@
 # ============================================================
-# VERCEL COMPATIBLE ENTRY POINT
-# This file is specifically for Vercel deployment
+# YASH WORLD - VERCEL COMPATIBLE VERSION
+# Minimal working version with NO database dependencies
 # ============================================================
 
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
-from functools import wraps
+import json
 from datetime import datetime
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from functools import wraps
 
 # ============================================================
 # APP CREATION
 # ============================================================
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'yash-world-secret-key-2024')
+app.secret_key = app.config['SECRET_KEY']
 
 # ============================================================
-# DATABASE CONFIGURATION - MOCK FOR VERCEL
+# LOGIN MANAGER (Simple)
 # ============================================================
-# On Vercel, we use a simple in-memory dict instead of SQLAlchemy
-# This allows the app to run without a database connection
-
-class MockDB:
-    """Mock database for Vercel deployment"""
-    def __init__(self):
-        self.users = {
-            'yash': {'password': 'admin123', 'is_admin': True, 'is_friend': True},
-            'Glory': {'password': 'lory', 'is_admin': False, 'is_friend': True}
-        }
-    
-    def get_user(self, username):
-        return self.users.get(username)
-    
-    def save_user(self, username, password, is_admin=False, is_friend=False):
-        self.users[username] = {'password': password, 'is_admin': is_admin, 'is_friend': is_friend}
-
-# Use mock database on Vercel
-db = MockDB()
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-class MockUser:
-    def __init__(self, username, is_admin=False, is_friend=False):
+# ============================================================
+# USER CLASS (Simple)
+# ============================================================
+class User(UserMixin):
+    def __init__(self, username, password, is_admin=False, is_friend=False):
         self.id = username
         self.username = username
+        self.password = password
         self.is_admin = is_admin
         self.is_friend = is_friend
-        self.questions = []
-        self.replies = []
-    
-    def set_password(self, password):
-        self.password = password
     
     def check_password(self, password):
         return self.password == password
-    
-    def get_id(self):
-        return self.username
+
+# ============================================================
+# USER STORE (In-Memory for Vercel)
+# ============================================================
+USERS = {
+    'yash': User('yash', 'admin123', is_admin=True, is_friend=True),
+    'Glory': User('Glory', 'lory', is_admin=False, is_friend=True)
+}
 
 @login_manager.user_loader
 def load_user(user_id):
-    user_data = db.get_user(user_id)
-    if user_data:
-        user = MockUser(user_id, user_data.get('is_admin', False), user_data.get('is_friend', False))
-        user.password = user_data.get('password')
-        return user
-    return None
+    return USERS.get(user_id)
 
+# ============================================================
+# ADMIN REQUIRED DECORATOR
+# ============================================================
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -79,7 +63,7 @@ def admin_required(f):
     return decorated_function
 
 # ============================================================
-# ROUTES - AUTHENTICATION
+# ROUTES
 # ============================================================
 
 @app.route('/')
@@ -98,9 +82,8 @@ def login():
         password = request.form.get('password')
         remember = request.form.get('remember', False)
         
-        user_data = db.get_user(username)
-        if user_data and user_data.get('password') == password:
-            user = MockUser(username, user_data.get('is_admin', False), user_data.get('is_friend', False))
+        user = USERS.get(username)
+        if user and user.check_password(password):
             login_user(user, remember=remember)
             flash('Login successful!', 'success')
             return redirect(url_for('dashboard'))
@@ -117,39 +100,68 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
 
-# ============================================================
-# ROUTES - DASHBOARD (Simplified for Vercel)
-# ============================================================
-
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    is_admin = current_user.is_admin
-    is_friend = current_user.is_friend
-    
     return render_template('dashboard.html', 
         questions=[],
         current_question=None,
         current_index=0,
         total_questions=0,
-        is_admin=is_admin,
-        is_friend=is_friend,
+        is_admin=current_user.is_admin,
+        is_friend=current_user.is_friend,
         current_user=current_user,
         feedback_questions=[],
         typing_text=None,
-        show_typing=False
+        show_typing=False,
+        replies=[]
     )
-
-# ============================================================
-# ROUTES - ADMIN
-# ============================================================
 
 @app.route('/admin/users')
 @login_required
 @admin_required
 def admin_users():
-    users = [{'username': 'yash', 'is_admin': True, 'is_friend': True, 'created_at': datetime.now()}]
-    return render_template('admin_users.html', users=users)
+    users_list = []
+    for username, user in USERS.items():
+        users_list.append({
+            'username': username,
+            'is_admin': user.is_admin,
+            'is_friend': user.is_friend,
+            'created_at': datetime.now()
+        })
+    return render_template('admin_users.html', users=users_list)
+
+@app.route('/admin/feedback')
+@login_required
+@admin_required
+def admin_feedback():
+    return render_template('admin_feedback.html', 
+        questions=[],
+        responses=[],
+        feedback_questions=[]
+    )
+
+@app.route('/admin/settings', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_settings():
+    settings = {'site_title': 'YASH WORLD', 'site_tagline': 'Private Messaging Platform'}
+    if request.method == 'POST':
+        flash('Settings updated successfully!', 'success')
+        return redirect(url_for('admin_settings'))
+    return render_template('admin_settings.html', settings=settings)
+
+@app.route('/admin/responses')
+@login_required
+@admin_required
+def admin_responses():
+    return render_template('admin_responses.html',
+        all_replies=[],
+        total_replies=0,
+        unique_questions=0,
+        total_questions=0,
+        completion_percentage=0
+    )
 
 # ============================================================
 # ERROR HANDLERS
@@ -164,11 +176,8 @@ def server_error(error):
     return render_template('error.html', error_code=500, message='Internal server error'), 500
 
 # ============================================================
-# VERCEL ENTRY POINT
+# RUN THE APPLICATION
 # ============================================================
-
-# The 'app' object is what Vercel imports
-# This is the handler for Vercel serverless functions
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
