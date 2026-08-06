@@ -12,7 +12,6 @@
     Only one text can be active at a time.
 </p>
 
-<!-- Add New Typing Text -->
 <div style="padding: 20px; border-radius: 18px; background: var(--bg-primary); box-shadow: var(--inset-shadow); margin-bottom: 25px;">
     <h4 style="color: var(--text-secondary); margin-bottom: 15px;">➕ Add New Typing Text</h4>
     <form method="post" style="display: flex; flex-direction: column; gap: 15px;">
@@ -25,7 +24,6 @@
     </form>
 </div>
 
-<!-- All Typing Texts -->
 <div style="padding: 20px; border-radius: 18px; background: var(--bg-primary); box-shadow: var(--card-shadow);">
     <h4 style="color: var(--text-secondary); margin-bottom: 15px;">📋 All Typing Texts</h4>
     
@@ -60,5 +58,12 @@
 <div style="margin-top: 20px;">
     <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
 </div>
+
+<style>
+@media (max-width: 600px) {
+    .btn-sm { width: 100%; justify-content: center; }
+    form { width: 100%; }
+}
+</style>
 
 {% endblock %}
