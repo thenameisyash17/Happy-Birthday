@@ -1,6 +1,6 @@
 # ============================================================
 # YASH WORLD - Private Messaging & QA Platform
-# Fixed for Render & Vercel Compatibility
+# Vercel & Render Compatible Version
 # ============================================================
 
 import os
@@ -13,7 +13,6 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import base64
-import sys
 
 # ============================================================
 # LOGGING CONFIGURATION
@@ -32,13 +31,19 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'yash-world-secret-key-2
 # ============================================================
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
-if DATABASE_URL:
+# For Vercel, use SQLite (read-only) or skip DB operations
+IS_VERCEL = os.environ.get('VERCEL', False)
+
+if DATABASE_URL and not IS_VERCEL:
     if DATABASE_URL.startswith('postgres://'):
         DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
     logger.info("✅ PostgreSQL database configured")
+elif IS_VERCEL:
+    # On Vercel, use in-memory SQLite for basic functionality
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    logger.warning("⚠️ Using in-memory SQLite on Vercel - data will not persist")
 else:
-    # Use SQLite for local development
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///yash_world.db'
     logger.warning("⚠️ SQLite database configured")
 
@@ -849,7 +854,7 @@ def server_error(error):
     return render_template('error.html', error_code=500, message='Internal server error'), 500
 
 # ============================================================
-# DATABASE INITIALIZATION
+# DATABASE INITIALIZATION (SKIP ON VERCEL)
 # ============================================================
 
 ADMIN_USERNAME = "yash"
@@ -908,8 +913,9 @@ def init_db():
             logger.error(f"❌ Database initialization error: {e}")
             db.session.rollback()
 
-# Initialize database
-init_db()
+# Only initialize database if NOT on Vercel
+if not os.environ.get('VERCEL'):
+    init_db()
 
 # ============================================================
 # RUN THE APPLICATION
