@@ -1,11 +1,9 @@
 # ============================================================
 # YASH WORLD - Private Messaging & QA Platform
-# Complete Version with PostgreSQL for Production
-# SQLite only for Local Development
+# PRODUCTION-READY FOR VERCEL WITH POSTGRESQL
 # ============================================================
 
 import os
-import json
 import logging
 from datetime import datetime
 from werkzeug.utils import secure_filename
@@ -14,7 +12,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-from sqlalchemy import func, desc, text
 import base64
 import sys
 
@@ -31,29 +28,20 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'yash-world-secret-key-2024')
 
 # ============================================================
-# DATABASE CONFIGURATION - FIXED FOR PRODUCTION
+# DATABASE CONFIGURATION - PRODUCTION ONLY
 # ============================================================
 
-# Get DATABASE_URL from environment variables
+# Get DATABASE_URL from environment variables (REQUIRED for Vercel)
 DATABASE_URL = os.environ.get('DATABASE_URL')
-
-# Determine if we're on Vercel or Render
-IS_PRODUCTION = os.environ.get('VERCEL') or os.environ.get('RENDER') or os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
     # ✅ PRODUCTION: Use PostgreSQL
-    # Convert postgres:// to postgresql:// (for Render compatibility)
+    # Convert postgres:// to postgresql://
     if DATABASE_URL.startswith('postgres://'):
         DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
     
-    # Use psycopg driver for Python 3.14+ compatibility (Render)
-    # Or use standard postgresql for Vercel
-    if os.environ.get('RENDER'):
-        app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL.replace('postgresql://', 'postgresql+psycopg://')
-        logger.info("✅ Render: PostgreSQL configured with psycopg driver - DATA WILL PERSIST")
-    else:
-        app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
-        logger.info("✅ Vercel/Production: PostgreSQL configured - DATA WILL PERSIST")
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+    logger.info("✅ PostgreSQL database configured - DATA WILL PERSIST")
     
     # SQLAlchemy engine options for production
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -63,19 +51,19 @@ if DATABASE_URL:
         'max_overflow': 10
     }
     
-elif not IS_PRODUCTION:
-    # ✅ LOCAL DEVELOPMENT: Use SQLite (only when no DATABASE_URL and not on Vercel/Render)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///yash_world.db'
-    logger.info("ℹ️ Local Development: SQLite database configured")
+    # Log database connection (without password)
+    safe_url = DATABASE_URL.split('@')[1] if '@' in DATABASE_URL else 'configured'
+    logger.info(f"📊 Connected to PostgreSQL: {safe_url}")
     
 else:
-    # ❌ Production but no DATABASE_URL - error
-    logger.error("❌ DATABASE_URL not set in production! Please add DATABASE_URL to environment variables.")
-    # Still try SQLite as fallback (will be read-only on Vercel)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///yash_world.db'
-    logger.warning("⚠️ Using SQLite fallback - data will NOT persist on Vercel/Render!")
+    # ❌ No DATABASE_URL - CRITICAL ERROR for Vercel
+    logger.error("❌ DATABASE_URL not set! Please add DATABASE_URL to environment variables.")
+    logger.error("⚠️ Application will not work properly without PostgreSQL on Vercel.")
+    
+    # Fallback to in-memory SQLite (read-only on Vercel, will cause errors)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    logger.warning("⚠️ Using in-memory SQLite - DATA WILL NOT PERSIST!")
 
-# Common SQLAlchemy configuration
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # ============================================================
@@ -90,6 +78,7 @@ login_manager.login_view = 'login'
 # MODELS
 # ============================================================
 class User(UserMixin, db.Model):
+    __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
@@ -108,6 +97,7 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
 class TypingText(db.Model):
+    __tablename__ = 'typing_text'
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.Text, nullable=False)
     is_active = db.Column(db.Boolean, default=True)
@@ -115,11 +105,12 @@ class TypingText(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Question(db.Model):
+    __tablename__ = 'question'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     text = db.Column(db.Text, nullable=False)
     
-    # Question media
+    # Question media (base64 encoded)
     image_data = db.Column(db.Text)
     video_data = db.Column(db.Text)
     audio_data = db.Column(db.Text)
@@ -144,9 +135,10 @@ class Question(db.Model):
     replies = db.relationship('Reply', backref='question', cascade='all, delete-orphan', lazy=True)
 
 class Reply(db.Model):
+    __tablename__ = 'reply'
     id = db.Column(db.Integer, primary_key=True)
     question_id = db.Column(db.Integer, db.ForeignKey('question.id', ondelete='CASCADE'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     text = db.Column(db.Text, nullable=False)
     
     image_data = db.Column(db.Text)
@@ -160,14 +152,16 @@ class Reply(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class FeedbackQuestion(db.Model):
+    __tablename__ = 'feedback_question'
     id = db.Column(db.Integer, primary_key=True)
     question = db.Column(db.String(500), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class FeedbackResponse(db.Model):
+    __tablename__ = 'feedback_response'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     question_id = db.Column(db.Integer, db.ForeignKey('feedback_question.id', ondelete='CASCADE'), nullable=False)
     rating = db.Column(db.Integer)
     comment = db.Column(db.Text)
@@ -177,6 +171,7 @@ class FeedbackResponse(db.Model):
     question = db.relationship('FeedbackQuestion', backref='responses', lazy=True)
 
 class SiteSettings(db.Model):
+    __tablename__ = 'site_settings'
     id = db.Column(db.Integer, primary_key=True)
     site_title = db.Column(db.String(200), default='YASH WORLD')
     site_tagline = db.Column(db.String(200), default='Private Messaging Platform')
@@ -236,6 +231,7 @@ def is_allowed_audio(filename):
     return get_file_extension(filename) in ALLOWED_AUDIO
 
 def file_to_base64(file):
+    """Convert file to base64 for database storage (Vercel-safe)"""
     if file and file.filename:
         try:
             file_data = file.read()
@@ -297,25 +293,17 @@ def dashboard():
     is_admin = current_user.is_admin
     is_friend = current_user.is_friend
     
-    # Get active typing text for friend
     typing_text = None
     show_typing = False
     
     if is_friend and not is_admin:
-        # Get active typing text
         typing_text = TypingText.query.filter_by(is_active=True).first()
-        # Check if friend has already seen the typing animation
         seen_typing = session.get('seen_typing_' + str(current_user.id), False)
-        # Show typing if text exists and not seen
         if typing_text and not seen_typing:
             show_typing = True
-        else:
-            show_typing = False
     
-    # Get current question index from session
     current_index = session.get('current_question_index', 0)
     
-    # If no questions, render with typing if available
     if not questions:
         return render_template('dashboard.html', 
             questions=[],
@@ -330,7 +318,6 @@ def dashboard():
             show_typing=show_typing
         )
     
-    # Reset index if out of bounds
     if current_index >= len(questions):
         current_index = 0
         session['current_question_index'] = 0
@@ -338,10 +325,8 @@ def dashboard():
     current_question = questions[current_index]
     total_questions = len(questions)
     
-    # Get replies for current question
     replies = Reply.query.filter_by(question_id=current_question.id).order_by(Reply.created_at.asc()).all()
     
-    # Get feedback questions for friend
     feedback_questions = []
     if is_friend:
         feedback_questions = FeedbackQuestion.query.filter_by(is_active=True).all()
@@ -386,12 +371,11 @@ def navigate_question():
 @app.route('/seen-typing', methods=['POST'])
 @login_required
 def seen_typing():
-    # Mark typing as seen for this user
     session['seen_typing_' + str(current_user.id)] = True
     return jsonify({'success': True})
 
 # ============================================================
-# ROUTES - ASK QUESTION WITH OPTIONAL ANSWER
+# ROUTES - ASK QUESTION
 # ============================================================
 
 @app.route('/ask', methods=['GET', 'POST'])
@@ -413,7 +397,6 @@ def ask_question():
             text=text
         )
         
-        # Question Media
         if 'image' in request.files and request.files['image'].filename:
             file = request.files['image']
             if is_allowed_image(file.filename):
@@ -432,14 +415,12 @@ def ask_question():
                 question.audio_data = file_to_base64(file)
                 question.audio_filename = secure_filename(file.filename)
         
-        # Optional Answer
         answer_text = request.form.get('answer_text', '').strip()
         if answer_text:
             question.answer_text = answer_text
             question.has_answer = True
             question.is_answered = True
             
-            # Answer Media
             if 'answer_image' in request.files and request.files['answer_image'].filename:
                 file = request.files['answer_image']
                 if is_allowed_image(file.filename):
@@ -467,7 +448,7 @@ def ask_question():
     return render_template('ask.html')
 
 # ============================================================
-# ROUTES - REPLY TO QUESTION (Friend)
+# ROUTES - REPLY TO QUESTION
 # ============================================================
 
 @app.route('/reply/<int:question_id>', methods=['GET', 'POST'])
@@ -520,7 +501,7 @@ def reply_question(question_id):
     return render_template('reply.html', question=question)
 
 # ============================================================
-# ROUTES - DELETE QUESTION & REPLY
+# ROUTES - DELETE
 # ============================================================
 
 @app.route('/question/<int:question_id>/delete', methods=['POST'])
@@ -550,7 +531,7 @@ def delete_reply(reply_id):
     return redirect(url_for('dashboard'))
 
 # ============================================================
-# ROUTES - EDIT QUESTION (Admin)
+# ROUTES - EDIT QUESTION
 # ============================================================
 
 @app.route('/question/<int:question_id>/edit', methods=['GET', 'POST'])
@@ -577,7 +558,7 @@ def edit_question(question_id):
     return render_template('edit_question.html', question=question)
 
 # ============================================================
-# ROUTES - DELETE INDIVIDUAL MEDIA (Admin)
+# ROUTES - DELETE INDIVIDUAL MEDIA
 # ============================================================
 
 @app.route('/question/<int:question_id>/delete-media', methods=['POST'])
@@ -629,7 +610,6 @@ def admin_typing_text():
     if request.method == 'POST':
         text = request.form.get('typing_text', '').strip()
         if text:
-            # Deactivate all existing
             TypingText.query.update({TypingText.is_active: False})
             new_text = TypingText(text=text, is_active=True)
             db.session.add(new_text)
@@ -672,7 +652,6 @@ def admin_delete_typing_text(text_id):
 # ROUTES - FEEDBACK SYSTEM
 # ============================================================
 
-# Admin - View All Feedback
 @app.route('/admin/feedback', methods=['GET'])
 @login_required
 @admin_required
@@ -685,7 +664,6 @@ def admin_feedback():
         responses=responses
     )
 
-# Admin - Add Feedback Question
 @app.route('/admin/feedback/add', methods=['POST'])
 @login_required
 @admin_required
@@ -700,7 +678,6 @@ def add_feedback_question():
         flash('Please enter a question.', 'danger')
     return redirect(url_for('admin_feedback'))
 
-# Admin - Toggle Feedback Question
 @app.route('/admin/feedback/toggle/<int:q_id>', methods=['POST'])
 @login_required
 @admin_required
@@ -712,7 +689,6 @@ def toggle_feedback_question(q_id):
     flash(f'Feedback question {status}!', 'success')
     return redirect(url_for('admin_feedback'))
 
-# Admin - Delete Feedback Question
 @app.route('/admin/feedback/delete/<int:q_id>', methods=['POST'])
 @login_required
 @admin_required
@@ -723,7 +699,6 @@ def delete_feedback_question(q_id):
     flash('Feedback question deleted!', 'success')
     return redirect(url_for('admin_feedback'))
 
-# Friend - Submit Feedback
 @app.route('/submit-feedback', methods=['POST'])
 @login_required
 def submit_feedback():
@@ -731,7 +706,6 @@ def submit_feedback():
         flash('Only friends can submit feedback.', 'danger')
         return redirect(url_for('dashboard'))
     
-    # Check if already submitted
     existing = FeedbackResponse.query.filter_by(user_id=current_user.id).first()
     if existing:
         flash('You have already submitted feedback.', 'warning')
@@ -769,23 +743,17 @@ def submit_feedback():
     return redirect(url_for('dashboard'))
 
 # ============================================================
-# ROUTES - ADMIN RESPONSES (View all replies)
+# ROUTES - ADMIN RESPONSES
 # ============================================================
 
 @app.route('/admin/responses')
 @login_required
 @admin_required
 def admin_responses():
-    # Get all replies
     all_replies = Reply.query.order_by(Reply.created_at.desc()).all()
-    
-    # Get total questions
     total_questions = Question.query.count()
-    
-    # Get unique questions that have replies
     unique_questions = db.session.query(Reply.question_id).distinct().count()
     
-    # Calculate completion percentage
     completion_percentage = 0
     if total_questions > 0:
         completion_percentage = int((unique_questions / total_questions) * 100)
@@ -799,7 +767,7 @@ def admin_responses():
     )
 
 # ============================================================
-# ROUTES - ADMIN - MANAGE USERS
+# ROUTES - ADMIN USERS
 # ============================================================
 
 @app.route('/admin/users')
@@ -824,7 +792,6 @@ def toggle_friend(user_id):
 @login_required
 @admin_required
 def reset_typing(user_id):
-    # Clear the typing session for the user
     session.pop('seen_typing_' + str(user_id), None)
     flash('Typing animation reset for user.', 'success')
     return redirect(url_for('admin_users'))
@@ -850,7 +817,7 @@ def admin_settings():
     return render_template('admin_settings.html', settings=settings)
 
 # ============================================================
-# ROUTES - MEDIA SERVE
+# ROUTES - MEDIA SERVE (Vercel-safe - serves base64 data)
 # ============================================================
 
 @app.route('/media/question/image/<int:question_id>')
@@ -908,23 +875,16 @@ def server_error(error):
     return render_template('error.html', error_code=500, message='Internal server error'), 500
 
 # ============================================================
-# DATABASE INITIALIZATION
+# DATABASE INITIALIZATION (Vercel-safe)
 # ============================================================
 
-# ============================================================
-# 🔑 CHANGE CREDENTIALS HERE
-# ============================================================
-ADMIN_USERNAME = "yash"      # Change this to your desired admin username
-ADMIN_PASSWORD = "admin123"       # Change this to your desired admin password
-FRIEND_USERNAME = "Glory"    # Change this to your desired friend username
-FRIEND_PASSWORD = "lory" # Change this to your desired friend password
-# ============================================================
+ADMIN_USERNAME = "yash"
+ADMIN_PASSWORD = "admin123"
+FRIEND_USERNAME = "Glory"
+FRIEND_PASSWORD = "lory"
 
 def init_db():
-    """
-    Initialize the database with tables and default data.
-    This runs on app startup.
-    """
+    """Initialize the database with tables and default data."""
     with app.app_context():
         try:
             # Create all tables if they don't exist
@@ -934,9 +894,9 @@ def init_db():
             # Log which database is being used
             db_url = app.config['SQLALCHEMY_DATABASE_URI']
             if 'postgresql' in db_url or 'postgres' in db_url:
-                logger.info(f"📊 Using PostgreSQL database: {db_url.split('@')[1] if '@' in db_url else 'configured'}")
+                logger.info(f"📊 Using PostgreSQL database (production)")
             else:
-                logger.warning(f"⚠️ Using SQLite database: {db_url}")
+                logger.warning(f"⚠️ Using SQLite database - DATA WILL NOT PERSIST!")
             
             # Create admin user
             admin = User.query.filter_by(username=ADMIN_USERNAME).first()
@@ -946,8 +906,6 @@ def init_db():
                 db.session.add(admin)
                 db.session.commit()
                 logger.info(f"✅ Admin user created: {ADMIN_USERNAME} / {ADMIN_PASSWORD}")
-            else:
-                logger.info(f"✅ Admin user already exists: {ADMIN_USERNAME}")
             
             # Create friend user
             friend = User.query.filter_by(username=FRIEND_USERNAME).first()
@@ -957,8 +915,6 @@ def init_db():
                 db.session.add(friend)
                 db.session.commit()
                 logger.info(f"✅ Friend user created: {FRIEND_USERNAME} / {FRIEND_PASSWORD}")
-            else:
-                logger.info(f"✅ Friend user already exists: {FRIEND_USERNAME}")
             
             # Create default settings
             settings = SiteSettings.query.first()
@@ -987,13 +943,6 @@ def init_db():
                 db.session.commit()
                 logger.info("✅ Default feedback questions created")
             
-            # Check if running on Vercel
-            is_vercel = os.environ.get('VERCEL', False)
-            if is_vercel:
-                logger.info("🚀 Running on Vercel with PostgreSQL")
-            else:
-                logger.info("🚀 Running locally")
-            
             logger.info("\n" + "="*60)
             logger.info("🚀 YASH WORLD - Private Messaging & QA Platform")
             logger.info("="*60)
@@ -1001,20 +950,22 @@ def init_db():
             logger.info(f"🔑 Admin (You): {ADMIN_USERNAME} / {ADMIN_PASSWORD}")
             logger.info(f"👤 Friend: {FRIEND_USERNAME} / {FRIEND_PASSWORD}")
             logger.info("💾 ALL DATA stored in Database - PERMANENT!")
-            logger.info("✏️ Typing Animation enabled for friend login")
             logger.info("="*60 + "\n")
             
         except Exception as e:
             logger.error(f"❌ Database initialization error: {e}")
             db.session.rollback()
-            # Re-raise to see the error on Vercel
-            raise
+            # Don't re-raise on Vercel - let the app try to work
+            if not os.environ.get('VERCEL'):
+                raise
+
+# Initialize database immediately for Vercel
+init_db()
 
 # ============================================================
-# RUN THE APPLICATION
+# RUN THE APPLICATION (Local development only)
 # ============================================================
 
 if __name__ == '__main__':
-    init_db()
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=True, host='0.0.0.0', port=port)
